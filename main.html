@@ -1,12 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="main.css"> 
-    <script src="main.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phishing Detection System</title>
-    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #f8f9fa, #d3d3f2);
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            padding: 50px 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            color: #007bff;
+        }
+        .description {
+            margin: 20px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .input-section {
+            margin-top: 30px;
+        }
+        #urlInput {
+            width: 60%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #whoisInfo {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #444;
+            text-align: left;
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="header">
@@ -24,5 +85,67 @@
         <p id="result"></p>
         <div id="whoisInfo"></div>
     </div>
+    
+    <script>
+        async function checkPhishing() {
+            let url = document.getElementById("urlInput").value;
+            let resultText = document.getElementById("result");
+            let whoisDiv = document.getElementById("whoisInfo");
+            
+            if (!url) {
+                resultText.innerHTML = "Please enter a URL.";
+                resultText.style.color = "red";
+                return;
+            }
+            
+            try {
+                // three different ML models, including Random Forest
+                let response1 = await fetch(`https://your-ml-api1.com/analyze?url=${encodeURIComponent(url)}`);
+                let data1 = await response1.json();
+                
+                let response2 = await fetch(`https://your-ml-api2.com/analyze?url=${encodeURIComponent(url)}`);
+                let data2 = await response2.json();
+                
+                let response3 = await fetch(`https://your-random-forest-api.com/analyze?url=${encodeURIComponent(url)}`);
+                let data3 = await response3.json();
+                
+                // WHOIS lookup
+                let whoisResponse = await fetch(`https://your-whois-api.com/lookup?domain=${encodeURIComponent(url)}`);
+                let whoisData = await whoisResponse.json();
+                
+                let riskScore1 = data1.risk_score;
+                let riskScore2 = data2.risk_score;
+                let riskScore3 = data3.risk_score; 
+                let finalRiskScore = (riskScore1 + riskScore2 + riskScore3) / 3;
+                let age = whoisData.domain_age;
+                let registrar = whoisData.registrar;
+                let creationDate = whoisData.creation_date;
+                let expirationDate = whoisData.expiration_date;
+                
+                let message = "";
+                if (finalRiskScore > 75 || age < 180) {
+                    message = "⚠️ Warning: This website is highly suspicious!";
+                    resultText.style.color = "red";
+                } else if (finalRiskScore > 50) {
+                    message = "⚠️ Caution: This website may be risky.";
+                    resultText.style.color = "orange";
+                } else {
+                    message = "✅ This website seems safe.";
+                    resultText.style.color = "green";
+                }
+                
+                resultText.innerHTML = `${message} <br> Risk Score 1: ${riskScore1}/100 <br> Risk Score 2: ${riskScore2}/100 <br> Random Forest Score: ${riskScore3}/100 <br> Final Risk Score: ${finalRiskScore}/100 <br> Domain Age: ${age} days`;
+                
+                whoisDiv.innerHTML = `<h3>WHOIS Information</h3>
+                                      <p><strong>Registrar:</strong> ${registrar}</p>
+                                      <p><strong>Creation Date:</strong> ${creationDate}</p>
+                                      <p><strong>Expiration Date:</strong> ${expirationDate}</p>`;
+                whoisDiv.style.display = "block";
+            } catch (error) {
+                resultText.innerHTML = "Error analyzing the website. Please try again later.";
+                resultText.style.color = "red";
+            }
+        }
+    </script>
 </body>
 </html>
